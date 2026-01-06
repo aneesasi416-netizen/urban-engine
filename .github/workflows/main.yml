@@ -1,0 +1,115 @@
+name: Optimized_Smooth_RDP
+on: workflow_dispatch
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    steps:
+      - name: 1. Setup Environment
+        run: |
+          Write-Host "Initializing high-performance RDP environment..."
+          
+      - name: 2. Install Tailscale
+        shell: powershell
+        run: |
+          $url = "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe"
+          $outpath = "$env:TEMP\tailscale-setup.exe"
+          Invoke-WebRequest -Uri $url -OutFile $outpath
+          Start-Process -FilePath $outpath -ArgumentList "/S" -Wait
+          & "C:\Program Files\Tailscale\tailscale.exe" up --authkey ${{ secrets.TAILSCALE_AUTH_KEY }} --accept-routes
+
+      - name: 3. Performance & Smoothness Tweaks
+        shell: powershell
+        run: |
+          # Enable RDP and Firewall
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          
+          # Optimization: Disable Visual Effects for performance
+          $visualPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects"
+          if (!(Test-Path $visualPath)) { New-Item -Path $visualPath -Force }
+          Set-ItemProperty -Path $visualPath -Name "VisualFXSetting" -Value 2
+          
+          # Optimization: Set RDP to prioritize network speed
+          $rdpPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"
+          if (!(Test-Path $rdpPath)) { New-Item -Path $rdpPath -Force }
+          Set-ItemProperty -Path $rdpPath -Name "MinFiberSize" -Value 512
+          
+          # Optimization: Enable RDP-UDP for smoother input lag
+          $udpPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services\Client"
+          if (!(Test-Path $udpPath)) { New-Item -Path $udpPath -Force }
+          Set-ItemProperty -Path $udpPath -Name "fClientDisableUDP" -Value 0
+
+      - name: 4. Configure User Account
+        shell: powershell
+        run: |
+          $User = "SmoothRunner"
+          $Pass = ConvertTo-SecureString "Pass123!$(Get-Random)" -AsPlainText -Force
+          New-LocalUser -Name $User -Password $Pass -Description "RDP User"
+          Add-LocalGroupMember -Group "Remote Desktop Users" -Member $User
+          Add-LocalGroupMember -Group "Administrators" -Member $User
+          Write-Host "USER CREATED: $User"
+          Write-Host "PASSWORD: Check your Secrets/Logs"
+
+      - name: 5. Keep Alive Loop
+        shell: powershell
+        run: |
+          $ip = (& "C:\Program Files\Tailscale\tailscale.exe" ip -4)
+          Write-Host "=============================================="
+          Write-Host "CONNECT TO: $ip"
+          Write-Host "USER: SmoothRunner"
+          Write-Host "RDP Client Tip: Set Connection Speed to 'LAN'"
+          Write-Host "=============================================="
+          
+          # Prevents workflow timeout (Max 6 hours)
+          $totalMinutes = 360
+          for ($i = 1; $i -le $totalMinutes; $i++) {
+            Write-Host "Session active... Minute $i of $totalMinutes"
+            Start-Sleep -Seconds 60
+          }
+
+# --- Performance Notes ---
+# 1. Use an RDP client that supports UDP (like the official Microsoft Remote Desktop app).
+# 2. In your local RDP client settings:
+#    - Set 'Experience' to 'LAN (10 Mbps or higher)'.
+#    - Uncheck 'Menu and window animation'.
+#    - Uncheck 'Desktop composition'.
+# 3. Tailscale ensures an encrypted peer-to-peer connection for lower latency.
+# -------------------------
+# Line 75
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# Line 111 (End of file)
